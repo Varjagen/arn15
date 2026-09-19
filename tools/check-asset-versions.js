@@ -2,7 +2,7 @@
 'use strict';
 // check-asset-versions.js - every local asset in index.html must carry a
 // ?v= that matches APP_VERSION.
-//
+// 
 // Why this is a build gate and not a code review note: the failure it prevents
 // is invisible to every other check. app.js can be correct, app.compiled.js can
 // match it, the whole suite can pass, and a returning player still sees the
