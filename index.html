@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#0a0e1a" />
+<title>Burrows and Badgers</title>
+<meta name="description" content="Burrows and Badgers - a lightweight tabletop companion. Dual-mode DM / Player sessions over WebRTC." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='78' font-size='84'%3E%E2%98%A0%EF%B8%8F%3C/text%3E%3C/svg%3E" />
+
+<script>
+  // No-FOUC theme boot. Runs before any paint so the UI opens in the
+  // correct theme instead of flashing default dark.
+  (function () {
+    try {
+      var raw = localStorage.getItem('plagues-call.settings.v2');
+      var valid = { dark: 1, forest: 1, darkcherry: 1, ocean: 1, light: 1, cherry: 1, river: 1, meadow: 1, paperlight: 1, paperdark: 1, cbdark: 1, cblight: 1 };
+      var theme = 'dark';
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (parsed && valid[parsed.theme]) theme = parsed.theme;
+      }
+      document.documentElement.setAttribute('data-theme', theme);
+    } catch (e) { /* ignore - default dark */ }
+  })();
+</script>
+
+<!-- v17.1: served from vendor/, not unpkg. The copies were added and never
+     wired, so the app still depended on a third party being reachable: unpkg
+     down, slow or blocked took the whole thing down, and without an integrity
+     attribute a compromised CDN could run arbitrary code in a page holding
+     campaign data and an open WebRTC channel. Verified byte-identical to the
+     published 18.2.0 UMD builds. (CONTRACT 11fh) -->
+<script src="vendor/react-18.2.0.min.js?v=17.6"></script>
+<script src="vendor/react-dom-18.2.0.min.js?v=17.6"></script>
+<!-- v7 bonus: in-browser Babel removed. We now ship app.compiled.js,
+     a precompiled JSX→JS bundle. Run ./build.sh after editing app.js
+     to refresh app.compiled.js. -->
+<script src="vendor/peerjs-1.5.4.min.js?v=17.6"></script>
+
+<!-- v9.85: cache-busted by build version. GitHub Pages serves these static
+     files with a long cache life, so a browser that has loaded the site before
+     will happily keep an OLD styles.css or app.compiled.js after a deploy - which looks exactly like "the fix didn't work". The ?v= is bumped with
+     APP_VERSION (tools/check-asset-versions.js keeps them in step), so every
+     deploy is a new URL and no player can be left on a stale build. -->
+<link rel="stylesheet" href="styles.css?v=17.6">
+</head>
+<body>
+<!-- v8.16: SVG filters for the paper/sketch themes. Kept off-screen; referenced
+     from CSS via filter: url(#id). The sketch filter roughens straight edges
+     with turbulence displacement so borders read as hand-drawn; the pencil
+     filter grayscales + edge-detects images so art looks sketched. -->
+<svg width="0" height="0" style="position:absolute;pointer-events:none" aria-hidden="true" focusable="false">
+  <defs>
+    <filter id="sketch-edges" x="-8%" y="-8%" width="116%" height="116%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.014 0.02" numOctaves="2" seed="7" result="noise"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="3.2" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <filter id="sketch-edges-soft" x="-6%" y="-6%" width="112%" height="112%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02 0.028" numOctaves="2" seed="19" result="noise"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.8" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <!-- pencil-sketch look for images: desaturate, detect edges, blend back so it
+         reads as a shaded drawing rather than pure black-and-white edges. -->
+    <filter id="pencil-image" x="0%" y="0%" width="100%" height="100%" color-interpolation-filters="sRGB">
+      <feColorMatrix type="saturate" values="0.15" result="gray"/>
+      <feConvolveMatrix in="gray" order="3" preserveAlpha="true"
+        kernelMatrix="0 -1 0  -1 4 -1  0 -1 0" divisor="1" bias="0" result="edges"/>
+      <feColorMatrix in="edges" type="matrix"
+        values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -1 -1 -1 0 1" result="edgesInv"/>
+      <feComponentTransfer in="edgesInv" result="edgesBoost">
+        <feFuncR type="gamma" amplitude="1" exponent="0.6" offset="0"/>
+        <feFuncG type="gamma" amplitude="1" exponent="0.6" offset="0"/>
+        <feFuncB type="gamma" amplitude="1" exponent="0.6" offset="0"/>
+      </feComponentTransfer>
+      <feBlend in="gray" in2="edgesBoost" mode="multiply" result="sketch"/>
+      <feComponentTransfer in="sketch">
+        <feFuncR type="linear" slope="1.15" intercept="-0.05"/>
+        <feFuncG type="linear" slope="1.15" intercept="-0.05"/>
+        <feFuncB type="linear" slope="1.15" intercept="-0.05"/>
+      </feComponentTransfer>
+    </filter>
+    <!-- v8.20: inverted pencil - light drawn lines on a dark ground, for tokens. -->
+    <filter id="pencil-image-inv" x="0%" y="0%" width="100%" height="100%" color-interpolation-filters="sRGB">
+      <feColorMatrix type="saturate" values="0.15" result="gray"/>
+      <feConvolveMatrix in="gray" order="3" preserveAlpha="true"
+        kernelMatrix="0 -1 0  -1 4 -1  0 -1 0" divisor="1" bias="0" result="edges"/>
+      <feColorMatrix in="edges" type="matrix"
+        values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  -1 -1 -1 0 1" result="edgesInv"/>
+      <feComponentTransfer in="edgesInv" result="edgesBoost">
+        <feFuncR type="gamma" amplitude="1" exponent="0.6" offset="0"/>
+        <feFuncG type="gamma" amplitude="1" exponent="0.6" offset="0"/>
+        <feFuncB type="gamma" amplitude="1" exponent="0.6" offset="0"/>
+      </feComponentTransfer>
+      <feBlend in="gray" in2="edgesBoost" mode="multiply" result="sketch"/>
+      <feColorMatrix in="sketch" type="matrix"
+        values="-1 0 0 0 1  0 -1 0 0 1  0 0 -1 0 1  0 0 0 1 0"/>
+    </filter>
+  </defs>
+</svg>
+<div id="root"></div>
+<script src="game-data.js?v=17.6"></script>
+<script src="app.compiled.js?v=17.6"></script>
+<script>
+/* v8.23: deploy diagnostic. If the app hasn't mounted shortly after load, the
+   most common cause on a static host (GitHub Pages) is that one of the split
+   files wasn't uploaded to the repo ROOT. Turn the blank screen into a list of
+   exactly which required files failed to load, so it's fixable at a glance.
+   Runs even if app.compiled.js threw (script errors don't stop later scripts). */
+(function () {
+  setTimeout(function () {
+    var root = document.getElementById('root');
+    if (!root || root.children.length > 0) return; // mounted fine
+    /* v17.1: these are vendored now, so "undefined" no longer means a CDN is
+       unreachable - it means a vendor/ file is missing from the deploy, which
+       is a different fault with a different fix. */
+    var vendor = [], local = [];
+    if (typeof React === 'undefined') vendor.push('vendor/react-18.2.0.min.js');
+    if (typeof ReactDOM === 'undefined') vendor.push('vendor/react-dom-18.2.0.min.js');
+    if (typeof Peer === 'undefined') vendor.push('vendor/peerjs-1.5.4.min.js');
+    if (typeof BNB_TOKEN_PRESETS === 'undefined') local.push('game-data.js');
+    var parts = [];
+    /* v17.6: the FOLDER is the usual cause, not the host. Drag-and-drop upload
+       to GitHub's web UI takes files and skips directories, so a repository
+       ends up with every root file and no vendor/, tests/ or tools/ at all.
+       v17.5 led with Jekyll, which is a real but rarer failure, and sent the
+       reader to add a .nojekyll that could not help. Most likely first. */
+    if (vendor.length) parts.push('The browser could not load: '
+      + vendor.map(function (f) { return '<code>' + f + '</code>'; }).join(', ')
+      + '. Nothing is fetched from the internet, so this is not a network problem. '
+      + 'The <code>vendor/</code> folder is almost certainly not on the server: '
+      + 'uploading files by drag-and-drop skips folders, so check that '
+      + '<code>vendor/</code> is really there beside <code>index.html</code>, '
+      + 'with all three files in it. If it IS there, the host may be hiding it - '
+      + 'GitHub Pages runs Jekyll, which drops <code>vendor/</code> unless a '
+      + '<code>.nojekyll</code> file sits next to <code>index.html</code>.');
+    if (local.length) parts.push('These files must be uploaded next to index.html (the repository root): '
+      + local.map(function (f) { return '<code>' + f + '</code>'; }).join(', ')
+      + '. Also make sure <code>styles.css</code> is there.');
+    var body = parts.length ? parts.join('<br><br>')
+      : 'The scripts loaded but the app did not start. Open the browser console (F12 &rarr; Console) and check the first error.';
+    root.innerHTML =
+      '<div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;'
+      + 'font-family:Georgia,serif;color:#e8dcc0;background:#171410;text-align:center">'
+      + '<div style="max-width:520px">'
+      + '<div style="font-size:26px;margin-bottom:10px;color:#d9b45a">Burrows &amp; Badgers could not start</div>'
+      + '<div style="font-size:14px;opacity:0.85;line-height:1.7">' + body + '</div>'
+      + '</div></div>';
+  }, 800);
+})();
+</script>
+</body>
+</html>

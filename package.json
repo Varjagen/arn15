@@ -1,0 +1,36 @@
+{
+  "name": "plagues-call-vtt",
+  "version": "8.11.0",
+  "private": true,
+  "description": "Burrows and Badgers / The Plague's Call - a single-page peer-to-peer virtual tabletop. app.js (JSX) compiles to app.compiled.js, which is what the browser and GitHub Pages serve.",
+  "scripts": {
+    "build": "bash build.sh",
+    "postinstall": "node -e \"try{require('fs').chmodSync('build.sh',0o755)}catch(e){}\"",
+    "serve": "python3 -m http.server 8080",
+    "lint:undefined": "node tools/check-undefined.js",
+    "verify:build": "node tools/verify-build.js",
+    "pretest": "node tools/check-engines.js && bash build.sh && node tools/verify-build.js && node tools/check-asset-versions.js && node tools/check-dashes.js && node tools/sync-theme-whitelist.js --check && node tools/check-vocabulary.js && node tools/check-design-tokens.js && node tools/check-orphans.js && node tools/check-undefined.js && node tools/validate-spells.js && node tools/validate-presets.js && node tools/integration-gate.js",
+    "test": "node --test tests/*.test.js",
+    "test:security": "node --test tests/security-filter.test.js",
+    "validate:spells": "node tools/validate-spells.js",
+    "gate": "node tools/integration-gate.js",
+    "report": "node tools/generate-report.js",
+    "check:engines": "node tools/check-engines.js",
+    "check:assets": "node tools/check-asset-versions.js",
+    "check:orphans": "node tools/check-orphans.js",
+    "check:dashes": "node tools/check-dashes.js",
+    "check:tokens": "node tools/check-design-tokens.js"
+  },
+  "devDependencies": {
+    "@babel/core": "^8.0.1",
+    "@babel/parser": "^8.0.1",
+    "@babel/preset-react": "^8.0.1",
+    "@babel/traverse": "^8.0.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-test-renderer": "^18.2.0"
+  },
+  "engines": {
+    "node": "^22.18.0 || >=24.11.0"
+  }
+}

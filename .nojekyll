@@ -1,0 +1,10 @@
+Disables Jekyll on GitHub Pages.
+
+Without this file Pages runs every push through Jekyll, which drops paths it
+treats as build artefacts - `vendor/` among them - so index.html asks for
+vendor/react-18.2.0.min.js and Pages serves a 404. The app then reports the
+three libraries as missing from the upload, which is true of the SITE even
+though the files were pushed to the repository.
+
+It must sit next to index.html and be committed. An empty file is enough; this
+text is here so nobody deletes it as clutter. See CONTRACT.md 11fl.
